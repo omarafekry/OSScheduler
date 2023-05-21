@@ -1,36 +1,43 @@
 import java.util.LinkedList;
-import java.util.List;
+import java.io.*;
 
 public class OperatingSystem {
-    LinkedList<Process> readyQueue;
-    Memory memory;
+    LinkedList<Process> readyQueue = new LinkedList<Process>();;
+    Memory memory = new Memory();
     int programCount = 1;
-    List<Process> processes;
-    int roundRobin = 1;
     boolean doneReadingPrograms = false;
-    public OperatingSystem(){
-        readyQueue = new LinkedList<Process>();
-    }
+
     public static void main(String[] args){
         OperatingSystem os = new OperatingSystem();
         os.run();
     }
+
     public void run(){
         while(true){
-            if (!doneReadingPrograms)
-                loadProgramToMemory("Program" + programCount);
-            if (readyQueue.isEmpty())
-                return;
-            memory.runProcess(processes.get(roundRobin));
-            if (!processes.get(roundRobin).isDone){
-                readyQueue.addLast(processes.get(roundRobin));
-            }
-            if (roundRobin < readyQueue.size())
-                roundRobin++;
-            
+
+            if (!doneReadingPrograms) loadProgramToMemory("Program_" + programCount + ".txt");
+            if (readyQueue.isEmpty()) return;
+
+            Process process = readyQueue.removeFirst();
+            memory.prepareProcess(process);
+
+            //run process here and set isDone property
+
+            if (!process.isDone) readyQueue.addLast(process);
+            else memory.removeProcess(process);
         }
     }
-    public void loadProgramToMemory(String filename){
 
+    public void loadProgramToMemory(String filename){
+        File programFile = new File(filename);
+        if (!programFile.exists()){
+            doneReadingPrograms = true;
+            return;
+        }
+        Process process = memory.addProcess(programFile, programCount);
+        programCount++;
+        readyQueue.addLast(process);
     }
+
+    
 }

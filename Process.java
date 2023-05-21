@@ -1,4 +1,4 @@
 public class Process {
-    int memoryStart, memoryEnd;
-    boolean loaded = true, isDone = false;
+    int id;
+    boolean isDone = false;
 }
