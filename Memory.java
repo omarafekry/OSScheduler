@@ -7,11 +7,11 @@ public class Memory {
     final int pcbSize = 4;
     final int noOfVariables = 3;
     LinkedHashMap<String, String> memory = new LinkedHashMap<String, String>();
-    HashSet<Integer> loadedProcesses = new HashSet<Integer>();
+    LinkedHashSet<Integer> loadedProcesses = new LinkedHashSet<Integer>();
     
 
     private void unloadProcess(){
-        int id = (Integer)loadedProcesses.toArray()[0];
+        int id = loadedProcesses.iterator().next();
         BufferedWriter writer = null;
         String MB = memory.get("" + id + "MB");
         int memoryStart = Integer.parseInt(MB.split(" ")[0]);
@@ -42,10 +42,19 @@ public class Memory {
         memory.remove("" + id + "VAR1");
         memory.remove("" + id + "VAR2");
         memory.remove("" + id + "VAR3");
-        for (int i = 0; i < numberOfLines; i++) 
+        for (int i = 0; i < numberOfLines; i++)
             memory.remove("" + id + "Line" + i);
 
         loadedProcesses.remove((Integer) id);
+
+        //decrease memory boundaries of all other processes
+        for (Integer pid : loadedProcesses) {
+            String value = memory.get(pid + "MB");
+            int newStart = Integer.parseInt(value.split(" ")[0]) - (noOfVariables + pcbSize + numberOfLines);
+            int newEnd = Integer.parseInt(value.split(" ")[1]) - (noOfVariables + pcbSize + numberOfLines);
+            memory.put(pid + "MB", newStart + " " + newEnd);
+        }
+
         System.out.println("Unloaded Process " + id + " onto disk");
     }
 
@@ -67,6 +76,7 @@ public class Memory {
             unloadProcess();
         
         Scanner sc = new Scanner(fis);
+        int memoryStart = memory.size();
         for (int i = 0; i < numberOfLines; i++){
             String line = sc.nextLine();
             String key = line.split("=")[0];
@@ -75,6 +85,11 @@ public class Memory {
                 value = line.split("=")[1];
             memory.put(key, value);
         }
+        int memoryEnd = memory.size() - 1;
+
+        //update memory boundaries
+        memory.put(id + "MB", memoryStart + " " + memoryEnd);
+
         sc.close();
 
         loadedProcesses.add(id);
@@ -86,7 +101,8 @@ public class Memory {
             loadProcess(process.id);
     }
     
-    public Process addProcess(File programFile, int id){
+    public Process addProcess(File programFile, Process process){
+        int id = process.id;
         long numberOfLines = 0;
         FileInputStream fis = null;
         try {
@@ -115,9 +131,6 @@ public class Memory {
         for (int i = 0; i < numberOfLines; i++) 
             memory.put("" + id + "Line" + i, sc.nextLine());
         sc.close();
-
-        Process process = new Process();
-        process.id = id;
 
         loadedProcesses.add(id);
         System.out.println("Added Process " + id + " to memory");
@@ -162,7 +175,7 @@ public class Memory {
         String MB = memory.get("" + id + "MB");
         int memoryStart = Integer.parseInt(MB.split(" ")[0]);
         int memoryEnd = Integer.parseInt(MB.split(" ")[1]);
-        return memoryEnd - memoryStart - (pcbSize + noOfVariables) - 1;
+        return memoryEnd - memoryStart - (pcbSize + noOfVariables) + 1;
     }
 
     public String getProcessLine(int id, int line){
@@ -179,8 +192,10 @@ public class Memory {
 
     public void setProcessVariable(int id, String variable, String value){
         for (int i = 1; i <= 3; i++) {
-            if (memory.get("" + id + "VAR" + i).equals("")) //empty variable slot
-                memory.replace("" + id + "VAR" + i, variable + " " + value);
+            if (memory.get("" + id + "VAR" + i).equals("")){ //empty variable slot
+                memory.put("" + id + "VAR" + i, variable + " " + value);
+                break;
+            }
             else if (memory.get("" + id + "VAR" + i).split(" ")[0].equals(variable)) //found variable name
                 memory.replace("" + id + "VAR" + i, variable + " " + value);
         }
@@ -192,5 +207,13 @@ public class Memory {
                 return memory.get("" + id + "VAR" + i).split(" ")[1];
         }
         return null;
+    }
+    
+    public void printMemory(){
+        Iterator<String> it = memory.keySet().iterator();
+        for (int i = 0; it.hasNext(); i++) {
+            String key = it.next();
+            System.out.println(i + ": " + key + " = " + memory.get(key));
+        }
     }
 }
